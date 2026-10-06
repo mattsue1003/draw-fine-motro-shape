@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>描圖運筆生成器</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Huninn&display=swap" rel="stylesheet">
+<style id="pagesize">@page{size:A4 portrait;margin:0}</style>
+<style>
+:root{
+  --bg:#F2F8F8;--panel:#FFFFFF;--ink:#12343B;--muted:#56717A;--teal:#028090;--orange:#E8552D;--amber:#F4A93C;--line:#D3E4E5;--soft:#E7F3F3;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+:root[data-theme="dark"]{--bg:#0F2A30;--panel:#163940;--ink:#EAF4F4;--muted:#A9C3C6;--line:#2C5158;--soft:#1B444B}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Huninn","Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+
+.top{display:flex;align-items:center;gap:18px;padding:20px 24px 6px;max-width:1440px;margin:0 auto}
+.hero{width:92px;height:92px;flex:none;background:#fff;border-radius:24px;border:2px dashed var(--line);display:grid;place-items:center}
+.hero svg{width:76px;height:76px}
+.hero .guide .dot{fill:#C3D2D4;stroke:none}
+.hero .draw > *:not(.dot){stroke-dasharray:1;stroke-dashoffset:1;animation:draw .9s ease-in-out forwards}
+.hero .draw .dot{fill:#E8552D;stroke:none;opacity:0;animation:pop .35s ease forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes pop{to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.hero .draw > *{animation:none!important;stroke-dashoffset:0!important;opacity:1!important}}
+.top h1{margin:0;font-size:clamp(24px,4vw,34px);font-weight:400;letter-spacing:.05em}
+.top p{margin:6px 0 0;color:var(--muted);font-size:15px;line-height:1.6;max-width:42em}
+
+.app{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:22px;padding:12px 24px 48px;max-width:1440px;margin:0 auto;align-items:start}
+.ctrl{background:var(--panel);border-radius:22px;padding:4px 20px 18px;border:1px solid var(--line)}
+.sec{padding:16px 0 14px;border-top:2px dashed var(--line)}
+.sec:first-child{border-top:0}
+.sec h3{margin:0 0 10px;font-size:15.5px;font-weight:400;color:var(--teal);display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.sec h3 small{color:var(--muted);font-size:13px}
+.hint{margin:9px 0 0;font-size:13.5px;color:var(--muted);line-height:1.6}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button,.mini,.chips button{padding:8px 13px;border-radius:999px;border:1.5px solid var(--line);background:var(--panel);cursor:pointer;font-size:14.5px;line-height:1.2}
+.seg button.on{background:var(--teal);border-color:var(--teal);color:#fff}
+.tabs button{flex:1;padding:12px 10px;font-size:16px}
+.tabs button.on{background:var(--orange);border-color:var(--orange)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button span{font-size:12px;opacity:.75;margin-left:2px}
+.chips button.on{background:var(--amber);border-color:var(--amber);color:#3a2400}
+.chips button.part{border-color:var(--amber)}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:6px;margin-top:10px;max-height:236px;overflow:auto;padding:3px}
+.thumb{aspect-ratio:1;border:1.5px solid var(--line);border-radius:14px;background:#fff;padding:5px;cursor:pointer;opacity:.32;transition:opacity .15s,border-color .15s}
+.thumb.on{opacity:1;border-color:var(--amber)}
+.thumb svg{width:100%!important;height:100%!important;display:block}
+.row-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.mini{font-size:13.5px;padding:7px 12px}
+.fld{display:block;font-size:14.5px;margin:4px 0 10px}
+.fld input{display:block;width:100%;margin-top:6px;padding:10px 12px;border-radius:12px;border:1.5px solid var(--line);font:inherit;font-size:15px;background:var(--panel);color:var(--ink)}
+.field{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0;font-size:14.5px;cursor:default}
+.num{display:flex;align-items:center;gap:6px}
+.num button{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--line);background:var(--panel);cursor:pointer;font-size:17px;line-height:1}
+.num output{min-width:2.2em;text-align:center;font-size:16px}
+.sw{appearance:none;-webkit-appearance:none;width:44px;height:26px;border-radius:13px;background:#CBDADC;position:relative;cursor:pointer;flex:none;margin:0;transition:background .15s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .15s}
+.sw:checked{background:var(--teal)}
+.sw:checked::after{transform:translateX(18px)}
+.hide{display:none!important}
+
+.prev{min-width:0}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--bg);padding:6px 0 12px}
+.count{flex:1;color:var(--muted);font-size:14.5px;min-width:10em}
+.btn-main{background:var(--orange);color:#fff;border:0;border-radius:999px;padding:12px 22px;font-size:16px;cursor:pointer}
+.tip{width:100%;margin:0;font-size:13px;color:var(--muted)}
+.pages{display:flex;flex-direction:column;align-items:center;gap:20px}
+.empty{padding:60px 20px;text-align:center;color:var(--muted);border:2px dashed var(--line);border-radius:22px;width:100%}
+
+/* ---------- paper ---------- */
+.page{position:relative;overflow:hidden;background:#fff;color:#12343B;flex:none;box-shadow:0 1px 0 #D3E4E5,0 12px 30px rgba(2,128,144,.10);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.pic .dot{fill:var(--dot);stroke:none}
+.hd{position:absolute;left:var(--m);right:var(--m);top:var(--m);height:var(--hd);display:flex;align-items:center;gap:calc(4mm*var(--f));border-bottom:calc(.7mm*var(--f)) dashed #F4A93C}
+.ttl{flex:1;min-width:0;font-size:calc(8.4mm*var(--f));color:#028090;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hf{display:flex;align-items:flex-end;gap:calc(1.6mm*var(--f));font-size:calc(4.3mm*var(--f));color:#3D5A60}
+.hf i{display:inline-block;width:calc(30mm*var(--f));height:calc(6mm*var(--f));border-bottom:.3mm solid #8FA3A7;margin-right:calc(2mm*var(--f))}
+.hf i.sh{width:calc(20mm*var(--f))}
+.sts{display:flex;gap:calc(.8mm*var(--f))}
+.sts svg{width:calc(7.5mm*var(--f));height:calc(7.5mm*var(--f))}
+.grid{position:absolute;left:var(--m);right:var(--m);display:grid}
+.cell{display:flex;flex-direction:column;align-items:center;justify-content:center;border:.35mm solid #DBE6E7;border-radius:calc(3.5mm*var(--f));min-width:0;min-height:0}
+.cell.blank{border:.45mm dashed #C3D4D6;background:#FBFDFD}
+.cell .art{display:flex;align-items:center;justify-content:center}
+.lab{font-size:calc(4.1mm*var(--f));color:#56717A;line-height:1;margin-top:calc(1.6mm*var(--f));white-space:nowrap}
+.ft{position:absolute;left:var(--m);right:var(--m);bottom:var(--m);height:var(--ft);display:flex;justify-content:space-between;align-items:flex-end;font-size:calc(3.6mm*var(--f));color:#7F969B}
+
+.cv{position:absolute;inset:var(--m);display:flex;flex-direction:column;align-items:center;justify-content:space-between;border:calc(.8mm*var(--f)) dashed #F4A93C;border-radius:calc(8mm*var(--f));padding:calc(10mm*var(--f)) calc(8mm*var(--f))}
+.cv-row{display:flex;gap:calc(9mm*var(--f));justify-content:center}
+.cv-t{font-size:calc(15mm*var(--f));color:#E8552D;text-align:center;line-height:1.25}
+.cv-s{font-size:calc(5.6mm*var(--f));color:#028090;margin-top:calc(-4mm*var(--f))}
+.cv-me{width:calc(82mm*var(--f));height:calc(82mm*var(--f));border:.5mm dashed #A9B9BC;border-radius:calc(7mm*var(--f));display:flex;align-items:flex-end;justify-content:center;padding-bottom:calc(3mm*var(--f));font-size:calc(4.6mm*var(--f));color:#A9B9BC}
+.cv-own,.ce-s{display:flex;align-items:flex-end;gap:calc(3mm*var(--f));font-size:calc(6mm*var(--f))}
+.cv-own i,.ce-s i,.ce-l i{display:inline-block;width:calc(70mm*var(--f));height:calc(9mm*var(--f));border-bottom:.4mm solid #12343B}
+.ce-t{font-size:calc(19mm*var(--f));color:#E8552D}
+.ce-l{display:flex;flex-direction:column;align-items:center;gap:calc(4mm*var(--f));font-size:calc(6mm*var(--f));text-align:center;line-height:1.5}
+.ce-s{font-size:calc(5mm*var(--f))}
+.ce-s i{width:calc(42mm*var(--f))}
+.ce-s i.sh{width:calc(32mm*var(--f))}
+.sts.big svg{width:calc(15mm*var(--f));height:calc(15mm*var(--f))}
+
+.docin{position:absolute;inset:var(--m);padding:calc(4mm*var(--f)) calc(4mm*var(--f))}
+.docin h2{margin:0 0 calc(4mm*var(--f));font-weight:400;font-size:calc(10mm*var(--f));color:#028090}
+.docin h3{margin:calc(8mm*var(--f)) 0 calc(2mm*var(--f));font-weight:400;font-size:calc(6.4mm*var(--f));color:#E8552D}
+.docin .lead,.docin p{font-size:calc(5mm*var(--f));line-height:1.7;margin:0}
+.docin ol{margin:calc(5mm*var(--f)) 0 0;padding-left:calc(8mm*var(--f));font-size:calc(5mm*var(--f));line-height:1.6}
+.docin li{margin-bottom:calc(3.4mm*var(--f))}
+.docin li b{display:block;font-weight:400;color:#028090;font-size:calc(5.6mm*var(--f))}
+.rec{width:100%;border-collapse:collapse;margin-top:calc(6mm*var(--f));table-layout:fixed}
+.rec th{font-weight:400;font-size:calc(4.2mm*var(--f));color:#56717A;padding:calc(2mm*var(--f)) 0;border-bottom:.5mm solid #F4A93C}
+.rec td{border:.3mm solid #DBE6E7;text-align:center;vertical-align:middle;font-size:calc(4.6mm*var(--f));color:#028090}
+.rec td svg{width:calc(8mm*var(--f));height:calc(8mm*var(--f))}
+.rec .fav{width:22%}
+.rec .wk{width:12%}
+
+@media (max-width:860px){
+  .app{grid-template-columns:1fr;padding:10px 14px 40px}
+  .top{padding:16px 14px 4px}
+  .hero{width:72px;height:72px;border-radius:20px}
+  .hero svg{width:58px;height:58px}
+}
+@media print{
+  :root{padding:0!important}
+  body{background:#fff}
+  .top,.ctrl,.bar{display:none!important}
+  .app{display:block;padding:0;max-width:none;margin:0}
+  .pages{zoom:1!important;display:block}
+  .page{box-shadow:none!important;margin:0;break-after:page;page-break-after:always}
+  .page:last-child{break-after:auto;page-break-after:auto}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="hero" id="hero" aria-hidden="true"></div>
+  <div>
+    <h1>描圖運筆生成器</h1>
+    <p>50 種可愛圖案和 50 種基本幾何圖形，沿著線描一描。可以印單頁學習單，也可以做成每週一本的練習手冊。</p>
+  </div>
+</header>
+
+<main class="app">
+  <aside class="ctrl">
+    <div class="sec">
+      <div class="seg tabs" data-k="tab">
+        <button data-v="single">單頁學習單</button>
+        <button data-v="book">每週手冊</button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>圖庫 <small id="selCount"></small></h3>
+      <div class="seg" data-k="lib" style="margin-bottom:10px">
+        <button data-v="pic">可愛圖案 50 種</button>
+        <button data-v="geo">基本幾何 50 種</button>
+      </div>
+      <p class="hint" id="libHint" style="margin:0 0 10px"></p>
+      <div class="chips" id="chips"></div>
+      <div class="thumbs" id="thumbs"></div>
+      <div class="row-btns">
+        <button class="mini" id="selAll">全選</button>
+        <button class="mini" id="selNone">全部取消</button>
+        <button class="mini" id="shuffle">換一組排列</button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>練習方式</h3>
+      <div class="seg" data-k="mode">
+        <button data-v="trace">描圖</button>
+        <button data-v="copy">描一個畫一個</button>
+        <button data-v="prog">由描到畫</button>
+      </div>
+      <p class="hint" id="modeHint"></p>
+    </div>
+
+    <div class="sec" id="secStyle">
+      <h3>描線樣式</h3>
+      <div class="seg" data-k="style">
+        <button data-v="bold">特粗虛線</button>
+        <button data-v="light">淡色實線</button>
+        <button data-v="dash">粗虛線</button>
+        <button data-v="dot">點點線</button>
+        <button data-v="fine">細虛線</button>
+      </div>
+      <p class="hint" id="styleHint"></p>
+    </div>
+
+    <div class="sec">
+      <h3>每頁圖案數</h3>
+      <div class="seg" data-k="n" id="nSeg"></div>
+    </div>
+
+    <div class="sec only-single">
+      <h3>學習單</h3>
+      <label class="fld">標題<input type="text" data-k="title" maxlength="20"></label>
+      <div class="field"><span>頁數</span><div class="num" data-k="pages" data-min="1" data-max="30"><button aria-label="減少">−</button><output></output><button aria-label="增加">＋</button></div></div>
+      <label class="field only-trace"><span>同一個圖案排滿整頁</span><input type="checkbox" class="sw" data-k="repeat"></label>
+    </div>
+
+    <div class="sec only-book">
+      <h3>手冊</h3>
+      <label class="fld">手冊名稱<input type="text" data-k="btitle" maxlength="16"></label>
+      <div class="field"><span>週數</span><div class="num" data-k="weeks" data-min="1" data-max="12"><button aria-label="減少">−</button><output></output><button aria-label="增加">＋</button></div></div>
+      <div class="field"><span>每週練習天數</span><div class="num" data-k="days" data-min="1" data-max="7"><button aria-label="減少">−</button><output></output><button aria-label="增加">＋</button></div></div>
+      <label class="field"><span>線條逐週變淡變少</span><input type="checkbox" class="sw" data-k="progress"></label>
+      <p class="hint">手冊包含封面、給大人的說明、練習紀錄表、每天一頁的練習和完成證書。</p>
+    </div>
+
+    <div class="sec">
+      <h3>紙張與版面</h3>
+      <div class="seg" data-k="paper">
+        <button data-v="A4">A4</button>
+        <button data-v="A5">A5</button>
+      </div>
+      <label class="field"><span>綠色起點</span><input type="checkbox" class="sw" data-k="start"></label>
+      <label class="field"><span>下筆方向箭頭</span><input type="checkbox" class="sw" data-k="arrows"></label>
+      <label class="field"><span>顯示圖案名稱</span><input type="checkbox" class="sw" data-k="names"></label>
+      <label class="field"><span>頁首完成星星</span><input type="checkbox" class="sw" data-k="stars"></label>
+    </div>
+  </aside>
+
+  <section class="prev">
+    <div class="bar">
+      <span class="count" id="count"></span>
+      <button class="btn-main" id="print">列印／存成 PDF</button>
+      <p class="tip">列印時邊界選「無」、縮放 100%；要存檔就在印表機選「另存為 PDF」。</p>
+    </div>
+    <div class="pages" id="pages"></div>
+  </section>
+</main>
+
+<script>
+const CATS={pic:[{id:'animal',name:'動物'},{id:'fruit',name:'蔬果'},{id:'life',name:'生活'},{id:'nature',name:'自然'}],
+  geo:[{id:'line',name:'直線'},{id:'curve',name:'曲線'},{id:'shape',name:'形狀'}]};
+const range=n=>Array.from({length:n},(_,i)=>i+1);
+const dots=(arr,r)=>arr.map(([x,y])=>`<circle class="dot" cx="${x}" cy="${y}" r="${r}"/>`).join('');
+const P=(id,name,cat,s)=>({id,name,cat,s});
+const PICS=[
+P('cat','貓咪','animal',`<path d="M25 46 L22 16 L40 31 Q50 28 60 31 L78 16 L75 46 Q80 82 50 83 Q20 82 25 46 Z"/>${dots([[40,52],[60,52]],3.2)}<path class="dot" d="M46 60 L54 60 L50 65 Z"/><path d="M50 65 Q46 71 41 68 M50 65 Q54 71 59 68"/><path d="M30 60 L12 56 M30 66 L12 68 M70 60 L88 56 M70 66 L88 68"/>`),
+P('dog','小狗','animal',`<circle cx="50" cy="52" r="26"/><path d="M30 36 Q12 36 14 64 Q22 72 28 62"/><path d="M70 36 Q88 36 86 64 Q78 72 72 62"/>${dots([[41,48],[59,48]],3.2)}<ellipse class="dot" cx="50" cy="60" rx="5" ry="3.6"/><path d="M50 63 L50 69 Q45 74 40 70 M50 69 Q55 74 60 70"/>`),
+P('rabbit','兔子','animal',`<path d="M41 42 Q30 6 39 5 Q48 6 47 40"/><path d="M59 42 Q70 6 61 5 Q52 6 53 40"/><ellipse cx="50" cy="62" rx="27" ry="23"/>${dots([[40,60],[60,60]],3.2)}<path class="dot" d="M46.5 67 L53.5 67 L50 71 Z"/><path d="M50 71 Q46 77 42 74 M50 71 Q54 77 58 74"/>`),
+P('bird','小鳥','animal',`<path d="M18 58 Q20 30 48 30 Q68 30 73 46 L88 50 L73 56 Q68 78 44 78 Q22 78 18 58 Z"/><path d="M32 56 Q46 46 56 62 Q44 70 32 56 Z"/>${dots([[61,43]],3)}<path d="M42 78 L40 90 M54 78 L56 90"/>`),
+P('fish','小魚','animal',`<path d="M18 50 Q44 20 72 50 Q44 80 18 50 Z"/><path d="M72 50 L90 34 L88 50 L90 66 Z"/>${dots([[31,46]],3)}<path d="M42 38 Q49 50 42 62"/><circle cx="12" cy="30" r="3.5"/><circle cx="20" cy="18" r="2.5"/>`),
+P('turtle','烏龜','animal',`<path d="M20 64 Q22 28 50 28 Q78 28 80 64 Z"/><path d="M36 64 L40 46 L60 46 L64 64 M40 46 L44 30 M60 46 L56 30"/><path d="M80 58 Q86 48 93 54 Q96 64 82 64"/>${dots([[88,55]],2)}<path d="M28 64 L26 76 L38 76 L38 64"/><path d="M62 64 L62 76 L74 76 L72 64"/><path d="M20 62 L10 66 L20 66"/>`),
+P('pig','小豬','animal',`<circle cx="50" cy="54" r="28"/><path d="M30 34 L26 16 L42 28"/><path d="M70 34 L74 16 L58 28"/><ellipse cx="50" cy="63" rx="12" ry="8.5"/>${dots([[45.5,63],[54.5,63]],2.2)}${dots([[39,46],[61,46]],3)}`),
+P('bear','小熊','animal',`<circle cx="50" cy="56" r="27"/><path d="M29 40 A10 10 0 1 1 41 30"/><path d="M71 40 A10 10 0 1 0 59 30"/><ellipse cx="50" cy="65" rx="11" ry="8.5"/><ellipse class="dot" cx="50" cy="61" rx="4.2" ry="3"/><path d="M50 64 L50 68 Q46 71 43 68 M50 68 Q54 71 57 68"/>${dots([[40,50],[60,50]],3.2)}`),
+P('chick','小雞','animal',`<circle cx="50" cy="54" r="27"/><path d="M46 27 Q46 16 51 22 Q54 14 57 27"/><path class="dot" d="M45 54 L55 54 L50 61 Z"/>${dots([[41,46],[59,46]],3)}<path d="M25 58 Q16 62 22 72"/><path d="M75 58 Q84 62 78 72"/><path d="M42 81 L40 90 L34 93 M40 90 L45 93 M58 81 L60 90 L55 93 M60 90 L66 93"/>`),
+P('butterfly','蝴蝶','animal',`<path d="M50 32 L50 78"/><path d="M50 42 Q28 12 16 28 Q12 48 50 50"/><path d="M50 42 Q72 12 84 28 Q88 48 50 50"/><path d="M50 53 Q22 54 24 72 Q34 84 50 62"/><path d="M50 53 Q78 54 76 72 Q66 84 50 62"/><path d="M50 32 Q46 22 40 18 M50 32 Q54 22 60 18"/>${dots([[40,18],[60,18]],2.4)}`),
+P('snail','蝸牛','animal',`<path d="M14 74 L86 74 Q92 74 90 68 Q88 64 80 64"/><path d="M32 72 Q28 34 54 30 Q78 28 80 52 Q80 68 62 68 Q46 68 46 54 Q46 44 56 44 Q64 44 64 52 Q64 58 58 58"/><path d="M14 74 Q12 64 20 60 L16 46 M22 62 L26 44"/>${dots([[16,45],[26,43]],2.6)}`),
+P('elephant','大象','animal',`<circle cx="50" cy="44" r="21"/><path d="M33 32 Q12 26 11 48 Q12 68 34 56"/><path d="M67 32 Q88 26 89 48 Q88 68 66 56"/><path d="M44 62 Q42 82 52 88 Q60 90 60 83 Q53 82 55 63"/>${dots([[42,41],[58,41]],3)}`),
+P('frog','青蛙','animal',`<path d="M16 62 Q16 40 50 40 Q84 40 84 62 Q84 82 50 82 Q16 82 16 62 Z"/><circle cx="34" cy="36" r="10"/><circle cx="66" cy="36" r="10"/>${dots([[34,36],[66,36]],4)}<path d="M34 62 Q50 72 66 62"/>`),
+P('penguin','企鵝','animal',`<path d="M50 12 Q74 12 76 50 Q78 86 50 88 Q22 86 24 50 Q26 12 50 12 Z"/><path d="M50 36 Q66 38 64 60 Q62 82 50 82 Q38 82 36 60 Q34 38 50 36 Z"/>${dots([[42,25],[58,25]],2.6)}<path class="dot" d="M46 29 L54 29 L50 34 Z"/><path d="M25 46 L13 64 L26 64"/><path d="M75 46 L87 64 L74 64"/><path d="M38 88 L33 95 L46 95 M62 88 L67 95 L54 95"/>`),
+P('owl','貓頭鷹','animal',`<path d="M24 30 L22 13 L36 24 Q50 18 64 24 L78 13 L76 30 Q86 60 70 80 Q50 92 30 80 Q14 60 24 30 Z"/><circle cx="38" cy="40" r="10"/><circle cx="62" cy="40" r="10"/>${dots([[38,40],[62,40]],3.6)}<path class="dot" d="M46 51 L54 51 L50 58 Z"/><path d="M40 67 Q44 71 48 67 M52 67 Q56 71 60 67 M46 75 Q50 79 54 75"/>`),
+P('crab','螃蟹','animal',`<ellipse cx="50" cy="60" rx="28" ry="17"/><path d="M42 44 L40 33 M58 44 L60 33"/>${dots([[40,31],[60,31]],3)}<path d="M24 52 Q10 40 16 26 L24 34 L26 22 Q38 34 30 49"/><path d="M76 52 Q90 40 84 26 L76 34 L74 22 Q62 34 70 49"/><path d="M26 67 L12 73 M29 73 L17 83 M74 67 L88 73 M71 73 L83 83"/><path d="M44 63 Q50 68 56 63"/>`),
+P('whale','鯨魚','animal',`<path d="M10 54 Q12 30 44 30 Q74 30 80 52 Q84 46 90 38 Q94 50 90 62 Q84 58 80 60 Q74 78 42 78 Q12 78 10 54 Z"/>${dots([[26,50]],3)}<path d="M40 30 L40 20 M40 20 Q32 11 27 16 M40 20 Q48 11 53 16"/><path d="M15 62 Q24 67 33 62"/>`),
+
+P('apple','蘋果','fruit',`<path d="M50 34 Q36 22 24 34 Q12 52 26 72 Q36 86 50 79 Q64 86 74 72 Q88 52 76 34 Q64 22 50 34 Z"/><path d="M50 34 Q50 24 54 14"/><path d="M53 22 Q63 10 74 16 Q66 28 53 22 Z"/>`),
+P('banana','香蕉','fruit',`<path d="M22 28 Q24 74 70 78 Q84 78 88 70 Q62 66 48 54 Q34 42 32 26 Z"/><path d="M22 28 L19 18 L28 18 L32 26"/><path d="M30 36 Q38 62 74 72"/>`),
+P('strawberry','草莓','fruit',`<path d="M22 38 Q50 30 78 38 Q82 62 50 90 Q18 62 22 38 Z"/><path d="M28 38 L36 24 L44 34 L50 20 L56 34 L64 24 L72 38"/>${dots([[38,50],[50,48],[62,50],[44,62],[56,62],[50,75],[34,62],[66,62]],1.7)}`),
+P('watermelon','西瓜','fruit',`<path d="M10 38 Q50 100 90 38 Z"/><path d="M19 44 Q50 88 81 44"/>${dots([[36,50],[50,53],[64,50],[43,60],[57,60]],2)}`),
+P('grapes','葡萄','fruit',`<path d="M48 32 L51 16"/><path d="M51 20 Q62 8 72 16 Q64 28 51 20 Z"/>${[[40,40],[56,40],[32,54],[48,54],[64,54],[40,68],[56,68],[48,82]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="8"/>`).join('')}`),
+P('pineapple','鳳梨','fruit',`<ellipse cx="50" cy="64" rx="20" ry="26"/><path d="M38 40 L32 14 L44 30 L50 8 L56 30 L68 14 L62 40"/><path d="M36 52 L64 80 M34 66 L54 86 M44 44 L66 66 M64 52 L36 80 M66 66 L46 86 M56 44 L34 66"/>`),
+P('cherry','櫻桃','fruit',`<circle cx="32" cy="72" r="13"/><circle cx="68" cy="72" r="13"/><path d="M32 59 Q38 32 56 18"/><path d="M68 59 Q62 36 56 18"/><path d="M56 18 Q70 6 82 14 Q72 26 56 18 Z"/>`),
+P('pear','梨子','fruit',`<path d="M50 22 Q42 22 42 34 Q42 44 32 56 Q22 72 34 84 Q50 94 66 84 Q78 72 68 56 Q58 44 58 34 Q58 22 50 22 Z"/><path d="M50 22 L52 11"/><path d="M52 16 Q62 8 70 14 Q62 22 52 16 Z"/>`),
+P('orange','橘子','fruit',`<circle cx="50" cy="56" r="30"/><path d="M50 26 Q56 12 70 14 Q66 28 50 26 Z"/>${dots([[40,44],[60,50],[46,64],[64,68],[34,60]],1.4)}`),
+P('peach','桃子','fruit',`<path d="M50 28 Q30 18 20 38 Q12 62 30 78 Q42 88 50 82 Q58 88 70 78 Q88 62 80 38 Q70 18 50 28 Z"/><path d="M50 28 Q40 52 50 82"/><path d="M50 28 Q40 10 28 14 Q35 27 50 28 Z"/><path d="M50 28 Q60 9 73 12 Q66 25 50 28 Z"/>`),
+P('carrot','紅蘿蔔','fruit',`<path d="M34 30 Q50 20 62 36 L24 90 Q17 93 19 85 Z"/><path d="M38 48 L45 51 M32 62 L39 65 M28 74 L33 76"/><path d="M50 27 Q44 10 53 5 M55 29 Q62 12 74 14 M60 33 Q76 25 84 32"/>`),
+
+P('house','房子','life',`<path d="M16 48 L50 18 L84 48"/><path d="M24 42 L24 86 L76 86 L76 42"/><path d="M43 86 L43 64 L57 64 L57 86"/><path d="M30 52 L40 52 L40 62 L30 62 Z"/><path d="M60 52 L70 52 L70 62 L60 62 Z"/><path d="M64 30 L64 20 L72 20 L72 37"/>`),
+P('umbrella','雨傘','life',`<path d="M14 50 Q16 18 50 16 Q84 18 86 50 Q78 42 68 50 Q59 42 50 50 Q41 42 32 50 Q23 42 14 50 Z"/><path d="M50 50 L50 80 Q50 88 43 88 Q36 88 36 82"/><path d="M50 16 L50 9"/>`),
+P('cup','杯子','life',`<path d="M24 30 L30 84 L66 84 L72 30 Z"/><path d="M70 42 Q86 42 84 56 Q82 68 68 66"/><path d="M38 22 Q34 16 38 10 M50 22 Q46 16 50 10 M62 22 Q58 16 62 10"/>`),
+P('car','汽車','life',`<path d="M37 70 L63 70 M81 70 L90 70 L90 56 Q90 48 78 48 L66 32 L32 32 L22 48 Q12 48 10 54 L10 70 L19 70"/><path d="M35 36 L48 36 L48 47 L28 47 Z"/><path d="M52 36 L64 36 L72 47 L52 47 Z"/><circle cx="28" cy="72" r="9"/><circle cx="72" cy="72" r="9"/>`),
+P('pencil','鉛筆','life',`<path d="M18 62 L58 22 L76 40 L36 80 Z"/><path d="M18 62 L10 88 L36 80"/><path class="dot" d="M13.5 77 L10 88 L21 84.5 Z"/><path d="M58 22 L66 14 L84 32 L76 40"/><path d="M54 26 L72 44"/>`),
+P('clock','時鐘','life',`<circle cx="50" cy="54" r="32"/><path d="M50 54 L50 34"/><path d="M50 54 L64 62"/>${dots([[50,54]],2.5)}<path d="M50 26 L50 30 M78 54 L74 54 M50 82 L50 78 M22 54 L26 54"/><path d="M30 80 L24 90 M70 80 L76 90"/>`),
+P('balloon','氣球','life',`<path d="M50 70 Q24 64 24 38 Q24 14 50 14 Q76 14 76 38 Q76 64 50 70 Z"/><path d="M46 75 L54 75 L50 70 Z"/><path d="M50 75 Q44 82 52 88 Q58 92 52 97"/><path d="M36 30 Q38 24 44 22"/>`),
+P('boat','小船','life',`<path d="M14 66 L86 66 L74 82 L26 82 Z"/><path d="M50 66 L50 14"/><path d="M53 18 L80 60 L53 60 Z"/><path d="M47 28 L26 60 L47 60 Z"/><path d="M10 92 Q17 86 24 92 Q31 98 38 92 Q45 86 52 92 Q59 98 66 92 Q73 86 80 92 Q87 98 92 92"/>`),
+P('icecream','冰淇淋','life',`<path d="M28 48 Q22 38 30 32 Q34 14 50 14 Q66 14 70 32 Q78 38 72 48 Z"/><path d="M32 48 L50 92 L68 48"/><path d="M38 57 L56 73 M62 57 L44 73"/><circle cx="58" cy="9" r="5"/>`),
+P('book','書本','life',`<path d="M50 26 Q34 16 14 22 L14 78 Q34 72 50 82 Q66 72 86 78 L86 22 Q66 16 50 26 Z"/><path d="M50 26 L50 82"/><path d="M22 37 Q32 35 42 39 M22 49 Q32 47 42 51 M58 39 Q68 35 78 37 M58 51 Q68 47 78 49"/>`),
+P('hat','帽子','life',`<path d="M10 74 Q50 90 90 74 Q90 66 76 66 L72 30 Q50 20 28 30 L24 66 Q10 66 10 74 Z"/><path d="M26 54 Q50 62 74 54"/>`),
+P('shirt','衣服','life',`<path d="M36 16 L15 28 L23 47 L32 43 L32 86 L68 86 L68 43 L77 47 L85 28 L64 16 Q50 30 36 16 Z"/><path d="M55 52 L64 52 L64 62 L55 62 Z"/>`),
+
+P('sun','太陽','nature',`<circle cx="50" cy="50" r="18"/><path d="M74 50 L84 50 M67 67 L74 74 M50 74 L50 84 M33 67 L26 74 M26 50 L16 50 M33 33 L26 26 M50 26 L50 16 M67 33 L74 26"/>${dots([[43,46],[57,46]],2.5)}<path d="M42 55 Q50 62 58 55"/>`),
+P('cloud','雲朵','nature',`<path d="M24 70 Q10 70 12 58 Q14 46 28 48 Q30 30 48 32 Q60 22 72 36 Q88 36 88 52 Q90 70 72 70 Z"/>${dots([[42,54],[58,54]],2.5)}<path d="M45 60 Q50 64 55 60"/>`),
+P('flower','花朵','nature',`<circle cx="50" cy="38" r="9"/>${[[50,20],[67,32],[61,52],[39,52],[33,32]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="9"/>`).join('')}<path d="M50 61 L50 92"/><path d="M50 78 Q62 64 72 70 Q62 82 50 78 Z"/>`),
+P('star','星星','nature',`<path d="M50 14 L58.8 39.9 L86 40.9 L64.3 57.6 L72.2 83.1 L50 68 L27.8 83.1 L35.7 57.6 L14 40.9 L41.2 39.9 Z"/>${dots([[44,52],[56,52]],2.4)}<path d="M46 59 Q50 62 54 59"/>`),
+P('heart','愛心','nature',`<path d="M50 84 Q12 58 16 36 Q20 18 37 19 Q48 21 50 34 Q52 21 63 19 Q80 18 84 36 Q88 58 50 84 Z"/>`),
+P('tree','大樹','nature',`<path d="M44 88 L44 62 Q30 66 22 56 Q12 44 24 34 Q24 16 42 16 Q50 6 62 14 Q80 12 80 32 Q92 44 80 58 Q70 66 56 62 L56 88"/><path d="M28 88 L72 88"/><path d="M44 70 L36 64 M56 72 L64 66"/>`),
+P('rainbow','彩虹','nature',`<path d="M12 74 A38 38 0 0 1 88 74"/><path d="M23 74 A27 27 0 0 1 77 74"/><path d="M34 74 A16 16 0 0 1 66 74"/><path d="M6 80 Q6 70 16 72 Q22 66 28 74 Q34 76 30 82 L8 82 Q6 82 6 80 Z"/>`),
+P('mushroom','蘑菇','nature',`<path d="M12 54 Q14 16 50 14 Q86 16 88 54 Z"/><path d="M38 54 L36 84 Q50 90 64 84 L62 54"/><circle cx="34" cy="38" r="5"/><circle cx="56" cy="28" r="6"/><circle cx="70" cy="44" r="4"/>`),
+P('snowman','雪人','nature',`<circle cx="50" cy="28" r="15"/><circle cx="50" cy="67" r="24"/>${dots([[45,25],[55,25]],2)}<path d="M50 30 L61 32 L50 34"/><path d="M29 60 L12 48 M71 60 L88 48"/>${dots([[50,58],[50,70]],2.5)}`),
+P('moon','月亮','nature',`<path d="M64 14 Q30 20 30 52 Q32 84 64 88 Q42 76 42 51 Q42 28 64 14 Z"/><circle cx="74" cy="34" r="2.5" class="dot"/><path d="M76 58 L80 58 M78 56 L78 60"/>`),
+];
+const spiral=(()=>{let d='M50 50';for(let i=1;i<=150;i++){const t=i/150,a=t*Math.PI*6,r=2+34*t;d+=` L${(50+r*Math.cos(a)).toFixed(1)} ${(50+r*Math.sin(a)).toFixed(1)}`;}return d;})();
+const pg=(n,r,cy=52,rot=-90)=>range(n).map(i=>{const a=(rot+i*360/n)*Math.PI/180;return [(50+r*Math.cos(a)).toFixed(1),(cy+r*Math.sin(a)).toFixed(1)];});
+const poly=pts=>`<path d="M${pts.map(p=>p.join(' ')).join(' L')} Z"/>`;
+const L1=d=>`<path d="${d}"/>`;
+const pen=pg(5,36);
+const GEOS=[
+P('hline','橫線','line',L1('M14 50 L86 50')),
+P('vline','直線','line',L1('M50 14 L50 86')),
+P('diag1','斜線（往右下）','line',L1('M18 18 L82 82')),
+P('diag2','斜線（往左下）','line',L1('M82 18 L18 82')),
+P('twolines','兩條橫線','line',L1('M14 36 L86 36 M14 64 L86 64')),
+P('plus','十字','line',L1('M14 50 L86 50 M50 14 L50 86')),
+P('xx','叉叉','line',L1('M20 20 L80 80 M80 20 L20 80')),
+P('lshape','L 形','line',L1('M28 14 L28 82 L84 82')),
+P('tshape','T 形','line',L1('M14 22 L86 22 M50 22 L50 86')),
+P('check','打勾','line',L1('M14 52 L38 76 L86 26')),
+P('vshape','V 形','line',L1('M18 20 L50 82 L82 20')),
+P('peak','山形','line',L1('M14 78 L50 22 L86 78')),
+P('arrowr','箭頭','line',L1('M32 14 L70 50 L32 86')),
+P('zigzag','鋸齒線','line',L1('M8 66 L22 34 L36 66 L50 34 L64 66 L78 34 L92 66')),
+P('stairs','階梯','line',L1('M14 86 L14 68 L32 68 L32 50 L50 50 L50 32 L68 32 L68 14 L86 14')),
+P('castle','城牆線','line',L1('M8 66 L8 36 L26 36 L26 66 L44 66 L44 36 L62 36 L62 66 L80 66 L80 36 L92 36')),
+P('wave','小波浪','curve',L1('M8 50 Q18.5 30 29 50 T50 50 T71 50 T92 50')),
+P('bigwave','大波浪','curve',L1('M8 50 Q29 10 50 50 T92 50')),
+P('vwave','直波浪','curve',L1('M50 8 Q30 18.5 50 29 T50 50 T50 71 T50 92')),
+P('arc','拱形','curve',L1('M12 74 Q50 -4 88 74')),
+P('bowl','碗形','curve',L1('M12 26 Q50 104 88 26')),
+P('cshape','C 形','curve',L1('M74 24 A34 34 0 1 0 74 76')),
+P('rcshape','反 C 形','curve',L1('M26 24 A34 34 0 1 1 26 76')),
+P('ushape','U 形','curve',L1('M25 16 L25 52 A25 25 0 0 0 75 52 L75 16')),
+P('nshape','倒 U 形','curve',L1('M25 84 L25 48 A25 25 0 0 1 75 48 L75 84')),
+P('sshape','S 形','curve',L1('M72 22 Q60 12 44 14 Q26 18 28 34 Q30 48 50 50 Q72 52 72 68 Q72 86 52 86 Q36 86 28 78')),
+P('arches','連續拱門','curve',L1('M8 72 Q18.5 28 29 72 Q39.5 28 50 72 Q60.5 28 71 72 Q81.5 28 92 72')),
+P('cups','連續碗形','curve',L1('M8 30 Q18.5 74 29 30 Q39.5 74 50 30 Q60.5 74 71 30 Q81.5 74 92 30')),
+P('loops','連續圈圈','curve',L1('M6 64 C24 64 34 30 22 30 C10 30 18 64 40 64 C58 64 68 30 56 30 C44 30 52 64 74 64 C88 64 94 52 94 52')),
+P('spiral','螺旋','curve',L1(spiral)),
+P('circle','圓形','shape',L1('M50 16 A34 34 0 1 1 49.9 16 Z')),
+P('oval','橢圓形','shape',L1('M50 28 A38 22 0 1 1 49.9 28 Z')),
+P('egg','蛋形','shape',L1('M50 14 Q78 14 78 56 Q78 86 50 86 Q22 86 22 56 Q22 14 50 14 Z')),
+P('square','正方形','shape',L1('M20 20 L80 20 L80 80 L20 80 Z')),
+P('rect','長方形','shape',L1('M12 30 L88 30 L88 70 L12 70 Z')),
+P('tri','三角形','shape',L1('M50 16 L86 80 L14 80 Z')),
+P('itri','倒三角形','shape',L1('M14 20 L86 20 L50 84 Z')),
+P('diamond','菱形','shape',L1('M50 12 L84 50 L50 88 L16 50 Z')),
+P('trap','梯形','shape',L1('M32 26 L68 26 L86 76 L14 76 Z')),
+P('para','平行四邊形','shape',L1('M30 28 L90 28 L70 74 L10 74 Z')),
+P('pent','五邊形','shape',poly(pen)),
+P('hex','六邊形','shape',poly(pg(6,36,50))),
+P('semi','半圓形','shape',L1('M14 66 A36 36 0 0 1 86 66 Z')),
+P('pie','扇形','shape',L1('M22 80 L22 22 A58 58 0 0 1 80 80 Z')),
+P('drop','水滴形','shape',L1('M50 12 Q80 50 78 64 A28 28 0 0 1 22 64 Q20 50 50 12 Z')),
+P('leafs','葉子形','shape',L1('M18 82 Q18 18 82 18 Q82 82 18 82 Z')),
+P('heartg','心形','shape',L1('M50 84 Q12 58 16 36 Q20 18 37 19 Q48 21 50 34 Q52 21 63 19 Q80 18 84 36 Q88 58 50 84 Z')),
+P('pstar','一筆星星','shape',`<path d="M${pen[0].join(' ')} L${pen[2].join(' ')} L${pen[4].join(' ')} L${pen[1].join(' ')} L${pen[3].join(' ')} Z"/>`),
+P('infinity','8 字形','shape',L1('M50 50 C62 30 88 32 88 50 C88 68 62 70 50 50 C38 30 12 32 12 50 C12 68 38 70 50 50 Z')),
+P('crescent','月牙形','shape',L1('M64 14 Q30 20 30 52 Q32 84 64 88 Q42 76 42 51 Q42 28 64 14 Z')),
+];
+const LIB={pic:PICS,geo:GEOS};
+// split multi-segment paths so every stroke gets its own start point
+[...PICS,...GEOS].forEach(p=>{p.s=p.s.replace(/<path([^>]*?)\sd="([^"]+)"([^>]*?)\/>/g,(m,a,d,b)=>d.split(/(?=M)/).map(seg=>`<path${a} d="${seg.trim()}"${b}/>`).join(''));});
+const byId=id=>PICS.find(p=>p.id===id)||GEOS.find(p=>p.id===id);
+
+const STY={
+  bold:{w:2.6,c:'#A3B5B8',d:[3.4,2.6]},
+  light:{w:1.5,c:'#BFCDCF',d:null},
+  dash:{w:1.1,c:'#7F969B',d:[2.2,1.7]},
+  dot:{w:1.6,c:'#7F969B',d:null,pts:{sp:2.1,r:.62}},
+  fine:{w:0.6,c:'#7F969B',d:[1.3,1.2]},
+  sparse:{w:1.7,c:'#7F969B',d:null,pts:{sp:3.0,r:.72}},
+  solid:{w:1.0,c:'#12343B',d:null}
+};
+const STAGES={pic:['light','dash','dot','fine'],geo:['bold','light','dash','dot']};
+const COL=['#E8552D','#028090','#F4A93C','#5AA469'];
+const STAR='<svg viewBox="0 0 24 24"><path d="M12 2.6l2.85 6.05 6.6.8-4.86 4.55 1.27 6.55L12 17.3l-5.86 3.25 1.27-6.55L2.55 9.45l6.6-.8z" fill="none" stroke="#F4A93C" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+const MM=3.7795;
+
+const S={tab:'single',mode:'trace',style:'dash',n:4,paper:'A4',start:false,names:true,stars:true,
+  title:'一起來描畫',pages:4,repeat:false,btitle:'我的運筆小手冊',weeks:4,days:5,progress:true,seed:1,
+  lib:'pic',arrows:false,sels:{pic:new Set(PICS.map(p=>p.id)),geo:new Set(GEOS.map(p=>p.id))}};
+Object.defineProperty(S,'sel',{get(){return S.sels[S.lib];}});
+const NOPT={trace:[1,2,3,4,6],copy:[1,2,3,4],prog:[1,2,3,4]};
+const MODE_HINT={trace:'沿著線把整個圖案描出來，描完可以塗上顏色。',copy:'左邊先描一次，右邊空格照著自己畫一個。',prog:'同一個圖案從淡線、虛線，到只描左半邊、右半邊自己仿畫，最後整個自己畫出來。'};
+const STYLE_HINT={bold:'線條最粗最明顯，適合復健或剛開始練習握筆的人。',light:'線條最清楚，適合剛開始握筆的孩子。',dash:'虛線間隔明顯，最常用的描寫線。',dot:'只剩點點引導，需要自己把點連起來。',fine:'細細的虛線，適合手部控制比較穩的孩子。'};
+
+const _unused=0;const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const D=()=>S.paper==='A5'?{w:148,h:210,m:9,hd:18,ft:7,f:.74}:{w:210,h:297,m:12,hd:24,ft:9,f:1};
+
+let clipN=0;
+function picSVG(pic,key,mm,start,color,wmm,half){
+  const st=STY[key],k=108/mm;
+  const w=(wmm||st.w)*k, c=color||st.c;
+  const da=st.d?st.d.map(v=>(v*k).toFixed(2)).join(' '):'none';
+  const df=color||(key==='solid'?st.c:key==='light'?'#BFCDCF':'#A9B9BC');
+  const pt=st.pts&&!color?` dt" data-sp="${(st.pts.sp*k).toFixed(3)}" data-r="${(st.pts.r*k).toFixed(3)}" data-c="${c}`:'';
+  return `<svg class="pic${start?' ns':''}${pt}" data-k="${k.toFixed(4)}" width="${mm.toFixed(2)}mm" height="${mm.toFixed(2)}mm" viewBox="-4 -4 108 108" style="--dot:${df}">${half?`<clipPath id="hc${++clipN}"><rect x="-6" y="-6" width="56" height="112"/></clipPath><line x1="50" y1="-2" x2="50" y2="102" stroke="#F4A93C" stroke-width="${(0.35*k).toFixed(2)}" stroke-dasharray="${(1.2*k).toFixed(2)} ${(1.4*k).toFixed(2)}"/>`:''}<g${half?` clip-path="url(#hc${clipN})"`:''} fill="none" stroke="${pt?'none':c}" stroke-width="${w.toFixed(2)}" stroke-dasharray="${da}" stroke-linecap="round" stroke-linejoin="round">${pic.s}</g></svg>`;
+}
+// dot styles: evenly spaced dots along each line, plus a dot on every corner/end point so the shape stays readable
+function vertices(el){
+  if(el.tagName!=='path')return [];
+  const out=[];let sx=0,sy=0;
+  (el.getAttribute('d').match(/[MLTQCAZ][^MLTQCAZ]*/gi)||[]).forEach(seg=>{
+    const c=seg[0].toUpperCase(),n=(seg.slice(1).match(/-?\d*\.?\d+/g)||[]).map(Number);
+    let p=null;
+    if(c==='M'||c==='L'||c==='T')p=[n[0],n[1]];else if(c==='Q')p=[n[2],n[3]];else if(c==='C')p=[n[4],n[5]];else if(c==='A')p=[n[5],n[6]];
+    if(c==='M'){sx=n[0];sy=n[1];}
+    if(p&&!isNaN(p[0]))out.push(p);
+  });
+  return out;
+}
+function addDots(root){
+  root.querySelectorAll('svg.dt').forEach(svg=>{
+    const sp=+svg.dataset.sp,r=+svg.dataset.r,c=svg.dataset.c;const pts=[];
+    const near=(x,y,lim)=>pts.some(p=>(p[0]-x)**2+(p[1]-y)**2<lim*lim);
+    svg.querySelectorAll('g > *:not(.dot)').forEach(e=>{
+      let L=0;try{L=e.getTotalLength();}catch(_){return;}
+      vertices(e).forEach(([x,y])=>{if(!near(x,y,sp*.35))pts.push([x,y]);});
+      const n=Math.max(1,Math.round(L/sp));
+      for(let i=0;i<=n;i++){const p=e.getPointAtLength(L*i/n);if(!near(p.x,p.y,sp*.6))pts.push([p.x,p.y]);}
+    });
+    svg.insertAdjacentHTML('beforeend',`<g fill="${c}">${pts.map(([x,y])=>`<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${r}"/>`).join('')}</g>`);
+    svg.classList.remove('dt');
+  });
+}
+function addStarts(root){
+  root.querySelectorAll('svg.ns').forEach(svg=>{
+    const k=+svg.dataset.k,r=1.3*k;let out='';
+    svg.querySelectorAll('g > *:not(.dot)').forEach(e=>{
+      try{const L=e.getTotalLength();if(L<18)return;const p=e.getPointAtLength(0);
+        out+=`<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="${r.toFixed(2)}" fill="#2BA84A" stroke="#fff" stroke-width="${(0.35*k).toFixed(2)}"/>`;
+        if(S.arrows&&L>14*k){const s=Math.min(9*k,L*.35),a=e.getPointAtLength(s-.5*k),b=e.getPointAtLength(s+.5*k);
+          const ang=Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI,c=e.getPointAtLength(s),z=1.7*k;
+          out+=`<path d="M${(-z).toFixed(2)} ${(-z).toFixed(2)} L${z.toFixed(2)} 0 L${(-z).toFixed(2)} ${z.toFixed(2)}" fill="none" stroke="#E8552D" stroke-width="${(0.6*k).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round" transform="translate(${c.x.toFixed(2)} ${c.y.toFixed(2)}) rotate(${ang.toFixed(1)})"/>`;}
+      }catch(_){}
+    });
+    svg.insertAdjacentHTML('beforeend',out);svg.classList.remove('ns');
+  });
+}
+const pageOpen=(d,cls)=>`<div class="page ${cls}" style="width:${d.w}mm;height:${d.h}mm;--m:${d.m}mm;--hd:${d.hd}mm;--ft:${d.ft}mm;--f:${d.f}">`;
+const header=t=>`<div class="hd"><div class="ttl">${esc(t)}</div><div class="hf"><span>名字</span><i></i><span>日期</span><i class="sh"></i></div>${S.stars?`<div class="sts">${STAR.repeat(3)}</div>`:''}</div>`;
+const footer=l=>`<div class="ft"><span>${esc(l||'')}</span><span>${S.start?'從綠點出發，沿著線慢慢描':'沿著線慢慢描，畫歪沒關係'}</span></div>`;
+
+function layout(mode,pics,key){
+  const cells=[];let cols,rows;const n=pics.length;
+  if(mode==='trace'){
+    pics.forEach(p=>cells.push({pic:p,key,label:p.name}));
+    [cols,rows]={1:[1,1],2:[1,2],3:[1,3],4:[2,2],6:[2,3]}[n]||[2,Math.ceil(n/2)];
+  }else if(mode==='copy'){
+    pics.forEach(p=>{cells.push({pic:p,key,label:p.name});cells.push({blank:1,label:'換你畫'});});
+    [cols,rows]=n===1?[1,2]:[2,n];
+  }else{
+    const st=[['light','照著描'],['dash','沿著虛線'],['half','描一半 畫一半'],[null,'自己畫']];
+    pics.forEach(p=>st.forEach(([k,l],i)=>cells.push(k==='half'?{pic:p,key:'dash',half:1,label:l}:k?{pic:p,key:k,label:i===0?`${p.name} ${l}`:l}:{blank:1,label:l})));
+    [cols,rows]=n===1?[2,2]:[4,n];
+  }
+  return {cells,cols,rows};
+}
+function sheet(title,{cells,cols,rows},footL){
+  const d=D(),gap=4*d.f,W=d.w-2*d.m,H=d.h-2*d.m-d.hd-d.ft-6*d.f;
+  const cw=(W-(cols-1)*gap)/cols,ch=(H-(rows-1)*gap)/rows;
+  const lab=S.names?6.5*d.f:0,pad=3.5*d.f;
+  const size=Math.max(12,Math.min(cw-2*pad,ch-lab-2*pad));
+  let h=pageOpen(d,'ws')+header(title);
+  h+=`<div class="grid" style="top:calc(var(--m) + var(--hd) + ${3*d.f}mm);height:${H}mm;grid-template-columns:repeat(${cols},minmax(0,1fr));grid-template-rows:repeat(${rows},minmax(0,1fr));gap:${gap}mm">`;
+  cells.forEach(c=>{
+    h+=`<div class="cell${c.blank?' blank':''}"><div class="art" style="width:${size}mm;height:${size}mm">${c.blank?'':picSVG(c.pic,c.key,size,S.start&&!c.half,null,null,c.half)}</div>${S.names?`<div class="lab">${esc(c.label)}</div>`:''}</div>`;
+  });
+  return h+'</div>'+footer(footL)+'</div>';
+}
+function queue(){
+  const arr=LIB[S.lib].filter(p=>S.sel.has(p.id));let seed=S.seed*9973;
+  const r=()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
+  for(let i=arr.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
+  let i=0;return ()=>arr[i++%arr.length];
+}
+const decoRow=(ids,mm,off=0)=>`<div class="cv-row">${ids.map((id,i)=>picSVG(byId(id),'solid',mm,false,COL[(i+off)%4],1.3)).join('')}</div>`;
+function cover(){
+  const d=D(),mm=30*d.f;
+  return pageOpen(d,'cover')+`<div class="cv">${decoRow(S.lib==='geo'?['circle','tri','square']:['cat','rabbit','apple'],mm)}<div class="cv-t">${esc(S.btitle)}</div><div class="cv-s">${S.weeks} 週運筆描畫練習</div><div class="cv-me">畫畫我自己</div><div class="cv-own"><span>這本手冊屬於</span><i></i></div>${decoRow(S.lib==='geo'?['wave','pstar','heartg']:['car','sun','fish'],mm,1)}</div></div>`;
+}
+function guide(){
+  const d=D(),who=S.lib==='geo'?'練習者':'孩子';
+  const startLi=S.start?'<li><b>從綠點出發</b>綠點是起點，沿著線慢慢畫，不用急。</li>':'<li><b>從線的一端出發</b>找到線的開頭，沿著線慢慢畫，不用急。</li>';
+  return pageOpen(d,'doc')+`<div class="docin"><h2>給陪伴的大人</h2><p class="lead">${S.lib==='geo'?'運筆練習能幫助手指、手腕和手臂學會控制筆的方向與力道，也是寫字和日常手部活動的基礎。':'運筆練習是寫字前的準備，讓手指和手腕學會控制筆的方向與力道。'}${S.lib==='geo'?'從一兩筆就能完成的線條和形狀開始，容易成功，也容易看見進步。':'用孩子喜歡的圖案來描，練習起來會更有動力。'}</p><ol>
+<li><b>坐好再開始</b>雙腳踩地，身體靠近桌子，另一隻手幫忙壓住紙。</li>
+${S.arrows?'<li><b>看箭頭的方向</b>橘色箭頭指出下筆的方向，照著箭頭畫。</li>':''}<li><b>先用手指走一次</b>沿著線用手指描一遍，再拿起筆。</li>${startLi}
+<li><b>畫歪沒關係</b>鼓勵${who}回到線上繼續畫，不一定要擦掉。</li>
+<li><b>完成後塗星星</b>讓${who}自己把頁首的星星塗上顏色，也可以幫圖案著色。</li>
+<li><b>一天一頁就好</b>每天固定一小段時間練習，天天做比一次做很多更重要。</li></ol>
+<h3>這本手冊的安排</h3><p>${MODE_HINT[S.mode]}${S.progress&&S.mode!=='prog'?'線條會隨著週數慢慢變淡、變少，讓${who}越來越能自己控制筆。':''}每完成一天，就在「我的練習紀錄」塗一顆星；全部完成後，最後一頁是完成證書。</p></div></div>`;
+}
+function record(){
+  const d=D(),rowH=Math.min(22*d.f,(d.h-2*d.m-62*d.f)/(S.weeks+1));
+  let t=`<tr><th class="wk"></th>${range(S.days).map(i=>`<th>第 ${i} 天</th>`).join('')}<th class="fav">最喜歡的圖案</th></tr>`;
+  range(S.weeks).forEach(w=>{t+=`<tr style="height:${rowH.toFixed(1)}mm"><td>第 ${w} 週</td>${range(S.days).map(()=>`<td>${STAR}</td>`).join('')}<td></td></tr>`;});
+  return pageOpen(d,'doc')+`<div class="docin"><h2>我的練習紀錄</h2><p class="lead">每完成一天，就把那天的星星塗上顏色。</p><table class="rec">${t}</table></div></div>`;
+}
+function cert(){
+  const d=D(),mm=26*d.f;
+  return pageOpen(d,'cover')+`<div class="cv">${decoRow(['star','heart','balloon'],mm,2)}<div class="ce-t">我完成了！</div><div class="ce-l"><i></i><span>完成了 ${S.weeks} 週的運筆描畫練習</span><span>每一條線，都是自己畫出來的</span></div><div class="sts big">${STAR.repeat(5)}</div><div class="ce-s"><span>陪伴的大人</span><i></i><span>日期</span><i class="sh"></i></div>${decoRow(S.lib==='geo'?['spiral','diamond','infinity']:['flower','rainbow','bird'],mm,1)}</div></div>`;
+}
+
+const pagesEl=document.getElementById('pages');
+let total=0;
+function render(){
+  document.getElementById('pagesize').textContent=`@page{size:${S.paper} portrait;margin:0}`;
+  if(!S.sel.size){pagesEl.innerHTML='<div class="empty">先在左邊選幾個圖案，學習單就會出現在這裡。</div>';document.getElementById('count').textContent='尚未選圖案';total=0;return;}
+  const next=queue();let h='';total=0;
+  const take=()=>S.mode==='trace'&&S.repeat&&S.tab==='single'?Array(S.n).fill(next()):Array.from({length:S.n},next);
+  if(S.tab==='single'){
+    range(S.pages).forEach(p=>{h+=sheet(S.title,layout(S.mode,take(),S.style),S.pages>1?`第 ${p} 頁`:'');total++;});
+  }else{
+    h+=cover()+guide()+record();total+=3;
+    range(S.weeks).forEach(w=>{
+      const key=S.progress?STAGES[S.lib][Math.min(3,Math.floor((w-1)*4/S.weeks))]:S.style;
+      range(S.days).forEach(dd=>{h+=sheet(`第 ${w} 週　第 ${dd} 天`,layout(S.mode,take(),key),S.btitle);total++;});
+    });
+    h+=cert();total++;
+  }
+  pagesEl.innerHTML=h;addDots(pagesEl);addStarts(pagesEl);
+  document.getElementById('count').textContent=`共 ${total} 頁　${S.paper}`;
+  fit();
+}
+function fit(){const d=D();const avail=pagesEl.parentElement.clientWidth;pagesEl.style.zoom=Math.min(1,(avail-6)/(d.w*MM));}
+let raf;const update=()=>{sync();cancelAnimationFrame(raf);raf=requestAnimationFrame(render);};
+
+// thumbs & chips
+const thumbsEl=document.getElementById('thumbs'),chipsEl=document.getElementById('chips');
+let thumbLib='';const buildThumbs=()=>{if(thumbLib===S.lib)return;thumbLib=S.lib;thumbsEl.innerHTML=LIB[S.lib].map(p=>`<button class="thumb" data-id="${p.id}" title="${p.name}" aria-label="${p.name}">${picSVG(p,'solid',28)}</button>`).join('');};
+thumbsEl.addEventListener('click',e=>{const b=e.target.closest('.thumb');if(!b)return;const id=b.dataset.id;S.sel.has(id)?S.sel.delete(id):S.sel.add(id);update();});
+chipsEl.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const all=LIB[S.lib].filter(p=>p.cat===b.dataset.c);const full=all.every(p=>S.sel.has(p.id));all.forEach(p=>full?S.sel.delete(p.id):S.sel.add(p.id));update();});
+document.getElementById('selAll').onclick=()=>{LIB[S.lib].forEach(p=>S.sel.add(p.id));update();};
+document.getElementById('selNone').onclick=()=>{S.sel.clear();update();};
+document.getElementById('shuffle').onclick=()=>{S.seed++;update();};
+document.getElementById('print').onclick=()=>window.print();
+
+document.querySelectorAll('.seg[data-k]').forEach(seg=>seg.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;const k=seg.dataset.k;S[k]=k==='n'?+b.dataset.v:b.dataset.v;
+  if(k==='lib'){S.n=S.lib==='geo'?2:4;S.arrows=S.lib==='geo';S.style=S.lib==='geo'?'bold':'dash';document.querySelector('input[data-k=arrows]').checked=S.arrows;}
+  if(k==='mode'||k==='lib'){const o=NOPT[S.mode];if(!o.includes(S.n))S.n=o.filter(v=>v<=S.n).pop()||o[0];}
+  update();
+}));
+document.querySelectorAll('.num').forEach(el=>{const k=el.dataset.k,min=+el.dataset.min,max=+el.dataset.max;const [dec,inc]=el.querySelectorAll('button');
+  dec.onclick=()=>{S[k]=Math.max(min,S[k]-1);update();};inc.onclick=()=>{S[k]=Math.min(max,S[k]+1);update();};});
+document.querySelectorAll('input[type=text][data-k]').forEach(i=>{i.value=S[i.dataset.k];i.addEventListener('input',()=>{S[i.dataset.k]=i.value;update();});});
+document.querySelectorAll('input[type=checkbox][data-k]').forEach(i=>{i.checked=S[i.dataset.k];i.addEventListener('change',()=>{S[i.dataset.k]=i.checked;update();});});
+
+function sync(){
+  document.getElementById('nSeg').innerHTML=NOPT[S.mode].map(v=>`<button data-v="${v}">${S.mode==='trace'?v+' 個':v+' 組'}</button>`).join('');
+  document.querySelectorAll('.seg[data-k]').forEach(seg=>seg.querySelectorAll('button').forEach(b=>{const on=String(S[seg.dataset.k])===b.dataset.v;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);}));
+  document.querySelectorAll('.num').forEach(el=>el.querySelector('output').textContent=S[el.dataset.k]);
+  document.querySelectorAll('.only-single').forEach(e=>e.classList.toggle('hide',S.tab!=='single'));
+  document.querySelectorAll('.only-book').forEach(e=>e.classList.toggle('hide',S.tab!=='book'));
+  document.querySelectorAll('.only-trace').forEach(e=>e.classList.toggle('hide',S.mode!=='trace'));
+  const lockStyle=S.mode==='prog'||(S.tab==='book'&&S.progress);
+  document.querySelector('#secStyle .seg').classList.toggle('hide',lockStyle);
+  document.getElementById('styleHint').textContent=S.mode==='prog'?'由描到畫會自動安排四格：淡線、虛線、描一半畫一半、自己畫。':(S.tab==='book'&&S.progress)?(S.lib==='geo'?'手冊會從特粗虛線開始，逐週換成淡色實線、粗虛線、點點線。':'手冊會從淡色實線開始，逐週換成虛線、點點線、細虛線。'):STYLE_HINT[S.style];
+  document.getElementById('modeHint').textContent=MODE_HINT[S.mode];
+  buildThumbs();
+  document.getElementById('libHint').textContent=S.lib==='geo'?'一兩筆就能畫完的線條與形狀，適合復健或非常入門的練習者。':'動物、蔬果、生活小物與自然，多筆畫的可愛圖案。';
+  thumbsEl.querySelectorAll('.thumb').forEach(b=>{const on=S.sel.has(b.dataset.id);b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);});
+  chipsEl.innerHTML=CATS[S.lib].map(c=>{const all=LIB[S.lib].filter(p=>p.cat===c.id),on=all.filter(p=>S.sel.has(p.id)).length;return `<button data-c="${c.id}" class="${on===all.length?'on':on?'part':''}">${c.name}<span>${on}/${all.length}</span></button>`;}).join('');
+  document.getElementById('selCount').textContent=`已選 ${S.sel.size} 個`;
+}
+
+// hero: the cat draws itself over its tracing guide
+(function(){
+  const cat=byId('cat');
+  document.getElementById('hero').innerHTML=`<svg viewBox="-4 -4 108 108"><g class="guide" fill="none" stroke="#C3D2D4" stroke-width="3" stroke-dasharray="5 4.5" stroke-linecap="round">${cat.s}</g><g class="draw" fill="none" stroke="#E8552D" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round">${cat.s}</g></svg>`;
+  let t=.3;document.querySelectorAll('#hero .draw > *').forEach(el=>{
+    if(el.classList.contains('dot')){el.style.animationDelay=(t+.1)+'s';return;}
+    el.setAttribute('pathLength','1');el.style.animationDelay=t+'s';t+=.28;
+  });
+  document.querySelectorAll('#hero .draw .dot').forEach(el=>el.style.animationDelay=(t)+'s');
+})();
+
+addEventListener('resize',()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(fit);});
+sync();render();
+if(document.fonts)document.fonts.ready.then(fit);
+</script>
+</body>
+</html>
